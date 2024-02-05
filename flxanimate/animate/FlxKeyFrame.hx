@@ -24,10 +24,51 @@ class FlxKeyFrame
 	@:allow(flxanimate.FlxAnimate)
 	var _colorEffect(get, null):ColorTransform;
 
-	public function new(index:Int, ?duration:Int = 1, ?elements:Array<FlxElement>, ?colorEffect:ColorEffect, ?name:String)
-	{
-		this.index = index;
-		this.duration = duration;
+    public function new(index:Int, ?duration:Int = 1, ?elements:Array<FlxElement>, ?colorEffect:ColorEffect, ?name:String)
+    {
+        this.index = index;
+        this.duration = duration;
+        
+        this.name = name;
+        _elements = (elements == null) ? [] : elements;
+        this.colorEffect = colorEffect;
+        callbacks = [];
+    }
+    
+    function set_duration(duration:Int)
+    {
+        var difference:Int = cast this.duration - FlxMath.bound(duration, 1);
+        this.duration = cast FlxMath.bound(duration, 1);
+        if (_parent != null)
+        {
+            var frame = _parent.get(index + duration);
+            if (frame != null)
+                frame.index -= difference;
+        }
+        return duration;
+    }
+    public function add(element:EitherType<FlxElement, Function>)
+    {   
+        if ((element is FlxElement))
+        {
+            var element:FlxElement = element;
+            if (element == null)
+            {
+                FlxG.log.error("this element is null!");
+                return null;
+            }
+            element._parent = this;
+            _elements.push(element);
+        }
+        else
+        {
+            if (element == null)
+            {
+                FlxG.log.error("this callback is null!");
+                return null;
+            }
+            callbacks.push(element);
+        }
 
 		this.name = name;
 		_elements = (elements == null) ? [] : elements;

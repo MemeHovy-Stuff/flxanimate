@@ -29,34 +29,39 @@ import flixel.graphics.frames.FlxFrame;
 
 class FlxAnimateFrames extends FlxAtlasFrames
 {
-	public function new()
-	{
-		super(null);
-		parents = [];
-	}
-	static var data:AnimateAtlas = null;
-	static var zip:Null<List<haxe.zip.Entry>>;
+    #if (flixel < "5.4.0")
+    public var parents:Array<FlxGraphic>;
+    
+    public function new(parent:FlxGraphic, ?border:FlxPoint)
+    {
+        parents = [parent];
+        super(parent, border);
+    }
+    #end
+    
+    static var data:AnimateAtlas = null;
+    static var zip:Null<List<haxe.zip.Entry>>;
 
-	public var parents:Array<FlxGraphic>;
-	/**
-	 * Parses the spritemaps into small sprites to use in the animation.
-	 *
-	 * @param Path          Where the Sprites are, normally you use it once when calling FlxAnimate already
-	 * @return              new sliced limbs for you to use ;)
-	 */
-	public static function fromTextureAtlas(Path:String):FlxAtlasFrames
-	{
-		var frames:FlxAnimateFrames = new FlxAnimateFrames();
-
-		if (zip != null || haxe.io.Path.extension(Path) == "zip")
-		{
-			#if html5
-			FlxG.log.error("Zip Stuff isn't supported on Html5 since it can't transform bytes into an image");
-			return null;
-			#end
-			var imagemap:Map<String, Bytes> = new Map();
-			var jsonMap:Map<String, AnimateAtlas> = new Map();
-			var thing = (zip != null) ? zip :  Zip.unzip(Zip.readZip(Assets.getBytes(Path)));
+    
+    /**
+     * Parses the spritemaps into small sprites to use in the animation.
+     * 
+     * @param Path          Where the Sprites are, normally you use it once when calling FlxAnimate already
+     * @return              new sliced limbs for you to use ;)
+     */
+    public static function fromTextureAtlas(Path:String):FlxAtlasFrames
+    {
+        var frames:FlxAnimateFrames = null;
+        
+        if (zip != null || haxe.io.Path.extension(Path) == "zip")
+        {
+            #if html5
+            FlxG.log.error("Zip Stuff isn't supported on Html5 since it can't transform bytes into an image");
+            return null;
+            #end
+            var imagemap:Map<String, Bytes> = new Map();
+            var jsonMap:Map<String, AnimateAtlas> = new Map();
+            var thing = (zip != null) ? zip :  Zip.unzip(Zip.readZip(Assets.getBytes(Path)));
 			for (list in thing)
 			{
 				if (haxe.io.Path.extension(list.fileName) == "json")
@@ -69,102 +74,103 @@ class FlxAnimateFrames extends FlxAtlasFrames
 					imagemap.set(name[name.length - 1], list.data);
 				}
 			}
-			// Assuming the json has the same stuff as the image stuff
-			for (curJson in jsonMap)
-			{
-				var curImage = BitmapData.fromBytes(imagemap[curJson.meta.image]);
-				if (curImage != null)
-				{
-					var graphic = FlxG.bitmap.add(curImage);
-					for (sprites in curJson.ATLAS.SPRITES)
-					{
-						frames.pushFrame(textureAtlasHelper(graphic, sprites.SPRITE, curJson.meta));
-					}
-				}
-				else
-					FlxG.log.error('the Image called "${curJson.meta.image}" isnt in this zip file!');
-			}
-			zip == null;
-		}
-		else
-		{
-			if (Assets.exists('$Path/spritemap.json'))
-				parseAtlasSpritemap(Path, 'spritemap.json', frames);
-			var i = 1;
-			while (Assets.exists('$Path/spritemap$i.json'))
-			{
-				parseAtlasSpritemap(Path, 'spritemap$i.json', frames);
-				i++;
-			}
-		}
-		if (frames.frames.length <= 0)
-		{
-			FlxG.log.error("the Frames parsing couldn't parse any of the frames, it's completely empty! \n Maybe you misspelled the Path?");
-			return null;
-		}
-		return frames;
-	}
-
-	public static function parseAtlasSpritemap(Path:String, name:String, frames:FlxAnimateFrames) {
-		var curJson:AnimateAtlas = haxe.Json.parse(StringTools.replace(Assets.getText('$Path/$name'), String.fromCharCode(0xFEFF), ""));
-		var curSpritemap = Assets.getBitmapData('$Path/${curJson.meta.image}');
-		if (curSpritemap != null)
-		{
-			var graphic = FlxG.bitmap.add(curSpritemap);
-			var spritemapFrames = FlxAtlasFrames.findFrame(graphic);
-			var padding:Float = 0;
-			if (curJson.ATLAS.SPRITES.length > 1) { // 2 or more, detect padding
-				var sprites = [for(s in curJson.ATLAS.SPRITES) s.SPRITE];
-				sprites.sort((n1, n2) -> Std.int(n1.x - n2.x));
-
-				var lowestY:Float = Math.POSITIVE_INFINITY;
-				var yMap:Map<Int, Bool> = [];
-				for(s in sprites) {
-					var y = Std.int(s.y);
-					if (s.y < lowestY) {
-						yMap.set(y, yMap[y] != null);
-
-						if (yMap[y])
-							lowestY = y;
-					}
-				}
-				if (lowestY != Math.POSITIVE_INFINITY) {
-					var _firstRowSprites = [for(s in sprites) if (s.y == lowestY) s];
-					var dedupCheck:Array<Int> = [];
-					var firstRowSprites = [];
-					for(s in _firstRowSprites) {
-						if(!dedupCheck.contains(Std.int(s.x))) {
-							firstRowSprites.push(s);
-							dedupCheck.push(Std.int(s.x));
-						}
-					}
-					if (firstRowSprites.length > 1) {
-						padding = firstRowSprites[1].x - firstRowSprites[0].x - firstRowSprites[0].w;
-					}
-				}
-			}
-			if(padding < 0) {
-				trace("BUG: " + padding + " => 0");
-				padding = 0;
-			} else {
-				trace(padding);
-			}
-			if (spritemapFrames == null)
-			{
-				spritemapFrames = new FlxAnimateFrames();
-				for (curSprite in curJson.ATLAS.SPRITES)
-				{
-					spritemapFrames.pushFrame(textureAtlasHelper(graphic,curSprite.SPRITE, curJson.meta, padding));
-				}
-			}
-			graphic.addFrameCollection(spritemapFrames);
-			frames.concat(spritemapFrames);
-		}
-		else
-			FlxG.log.error('the image called "${curJson.meta.image}" does not exist in Path $Path, maybe you changed the image Path somewhere else?');
-	}
-
-	public function concat(frames:FlxFramesCollection)
+            // Assuming the json has the same stuff as the image stuff
+            for (curJson in jsonMap)
+            {
+                var curImage = BitmapData.fromBytes(imagemap[curJson.meta.image]);
+                if (curImage != null)
+                {
+                    var graphic = FlxG.bitmap.add(curImage);
+                    frames = new FlxAnimateFrames(graphic);
+                    for (sprites in curJson.ATLAS.SPRITES)
+                    {
+                        frames.pushFrame(textureAtlasHelper(curImage, sprites.SPRITE, curJson.meta));
+                    }
+                }
+                else
+                    FlxG.log.error('the Image called "${curJson.meta.image}" isnt in this zip file!');
+            }
+            zip == null;
+        }
+        else
+        {
+            if (Assets.exists('$Path/spritemap.json'))
+            {
+                var curJson:AnimateAtlas = haxe.Json.parse(StringTools.replace(Assets.getText('$Path/spritemap.json'), String.fromCharCode(0xFEFF), ""));
+                var curSpritemap = Assets.getBitmapData('$Path/${curJson.meta.image}');
+                if (curSpritemap != null)
+                {
+                    var graphic = FlxG.bitmap.add(curSpritemap);
+                    var spritemapFrames = FlxAtlasFrames.findFrame(graphic);
+                    if (spritemapFrames == null)
+                    {
+                        spritemapFrames = new FlxAnimateFrames(graphic);
+                        for (curSprite in curJson.ATLAS.SPRITES)
+                        {
+                            spritemapFrames.pushFrame(textureAtlasHelper(graphic.bitmap,curSprite.SPRITE, curJson.meta));
+                        }
+                    }
+                    graphic.addFrameCollection(spritemapFrames);
+                    frames.addAtlas(spritemapFrames);
+                }
+                else
+                    FlxG.log.error('the image called "${curJson.meta.image}" does not exist in Path $Path, maybe you changed the image Path somewhere else?');
+            }
+            var i = 1;
+            while (Assets.exists('$Path/spritemap$i.json'))
+            {
+                var curJson:AnimateAtlas = haxe.Json.parse(StringTools.replace(Assets.getText('$Path/spritemap$i.json'), String.fromCharCode(0xFEFF), ""));
+                var curSpritemap = Assets.getBitmapData('$Path/${curJson.meta.image}');
+                if (curSpritemap != null)
+                {
+                    var graphic = FlxG.bitmap.add(curSpritemap);
+                    var spritemapFrames = FlxAtlasFrames.findFrame(graphic);
+                    if (spritemapFrames == null)
+                    {
+                        spritemapFrames = new FlxAnimateFrames(graphic);
+                        for (curSprite in curJson.ATLAS.SPRITES)
+                        {
+                            spritemapFrames.pushFrame(textureAtlasHelper(graphic.bitmap,curSprite.SPRITE, curJson.meta));
+                        }
+                    }
+                    graphic.addFrameCollection(spritemapFrames);
+                    if (frames == null)
+                        frames = new FlxAnimateFrames(graphic);
+                    frames.addAtlas(spritemapFrames);
+                }
+                else
+                    FlxG.log.error('the image called "${curJson.meta.image}" does not exist in Path $Path, maybe you changed the image Path somewhere else?');
+                i++;
+            }
+        }
+        if (frames.frames == [])
+        {
+            FlxG.log.error("the Frames parsing couldn't parse any of the frames, it's completely empty! \n Maybe you misspelled the Path?");
+            return null;
+        }
+        return frames;
+    }
+    #if (flixel < "5.4.0")
+    public function addAtlas(collection:FlxFramesCollection, overwriteHash:Bool = false):FlxAtlasFrames
+    {
+        if (collection.parent == null)
+            throw "Cannot add atlas with null parent";
+        
+        if (parents.indexOf(collection.parent) == -1)
+            parents.push(collection.parent);
+        for (frame in collection.frames)
+            pushFrame(frame);
+        return this;
+    }
+    #end
+	
+    /**
+     * Sparrow spritesheet format parser with support of both of the versions and making the image completely optional to you.
+     * @param Path The direction of the Xml you want to parse.
+     * @param Image (Optional) the image of the Xml.
+     * @return A new instance of `FlxAtlasFrames`
+     */
+    public static function fromSparrow(Path:FlxSparrow, ?Image:FlxGraphicAsset):FlxAtlasFrames
 	{
 		if (parents.indexOf(frames.parent) == -1)
 			parents.push(frames.parent);
@@ -648,6 +654,6 @@ typedef JsonNormal =
 }
 typedef Plist =
 {
-	frames:Dynamic,
-	metadata:Dynamic
+    frames:Dynamic,
+    metadata:Dynamic
 }
