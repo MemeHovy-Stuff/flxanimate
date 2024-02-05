@@ -16,7 +16,11 @@ import flxanimate.animate.*;
 import flxanimate.zip.Zip;
 import openfl.Assets;
 import haxe.io.BytesInput;
+#if (flixel >= "5.3.0")
+import flixel.sound.FlxSound;
+#else
 import flixel.system.FlxSound;
+#end
 import flixel.FlxG;
 import flxanimate.data.AnimationData;
 import flixel.FlxSprite;
@@ -266,7 +270,7 @@ class FlxAnimate extends FlxSprite
 
 			getScreenPosition(_point, camera).subtractPoint(offset);
 			rMatrix.translate(-origin.x, -origin.y);
-			if (limb != _pivot)
+			if (limb.name != "pivot")
 				rMatrix.scale(scale.x, scale.y);
 			else
 				rMatrix.a = rMatrix.d = 0.7 / camera.zoom;
@@ -415,7 +419,7 @@ class FlxAnimate extends FlxSprite
 		anim.buttonMap.set(button, {Callbacks: callbacks, #if FLX_SOUND_SYSTEM Sound:  sound #end});
 	}
 
-	function setTheSettings(?Settings:Settings):Void
+	public function setTheSettings(?Settings:Settings):Void
 	{
 		@:privateAccess
 		if (true)

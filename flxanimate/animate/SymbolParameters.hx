@@ -28,27 +28,27 @@ class SymbolParameters
 	public var transformationPoint:FlxPoint;
 
 
-	public function new(?name = null, ?instance:String = "", ?type:SymbolT = Graphic, ?loop:Loop = Loop)
-	{
-		this.name = name;
-		this.instance = instance;
-		this.type = type;
-		this.loop = loop;
-		firstFrame = 0;
-		transformationPoint = FlxPoint.get();
-		colorEffect = None;
-	}
+    public function new(?name = null, ?instance:String = "", ?type:SymbolT = Graphic, ?loop:Loop = Loop)
+    {
+        this.name = name;
+        this.instance = instance;
+        this.type = type;
+        this.loop = loop;
+        firstFrame = 0;
+        transformationPoint = FlxPoint.get();
+        colorEffect = None;
+    }
 
-	public function destroy()
-	{
-		instance = null;
-		type = null;
-		reverse = false;
-		firstFrame = 0;
-		name = null;
-		colorEffect = null;
-		transformationPoint = FlxDestroyUtil.put(transformationPoint);
-	}
+    public function destroy()
+    {
+        instance = null;
+        type = null;
+        reverse = false;
+        firstFrame = 0;
+        name = null;
+        colorEffect = null;
+        transformationPoint = FlxDestroyUtil.put(transformationPoint);
+    }
 
 	function set_type(type:SymbolT)
 	{
